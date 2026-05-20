@@ -1,0 +1,832 @@
+% ============================================================
+%  Airbnb Paris — Optimal Pricing Prediction
+%  Written Report — Business Analytics Using Python
+%  HEC Paris, May 2026
+% ============================================================
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ─────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{eurosym}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage[most]{tcolorbox}
+
+% ── Colours ──────────────────────────────────────────────────
+\definecolor{airbnbCoral}{HTML}{FF5A5F}
+\definecolor{airbnbDark}{HTML}{484848}
+\definecolor{airbnbGrey}{HTML}{767676}
+\definecolor{airbnbTeal}{HTML}{00A699}
+\definecolor{airbnbLight}{HTML}{F7F7F7}
+
+% ── Hyperref ─────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=airbnbCoral,
+  urlcolor=airbnbTeal,
+  citecolor=airbnbDark,
+  pdftitle={Optimal Pricing Prediction for Airbnb Listings in Paris},
+  pdfauthor={Group Project --- HEC Paris}
+}
+
+% ── Section formatting ───────────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{airbnbDark}}
+  {\thesection.}{0.5em}{}[\color{airbnbCoral}\titlerule]
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{airbnbDark}}
+  {\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}
+  {\normalsize\itshape\color{airbnbGrey}}
+  {\thesubsubsection.}{0.5em}{}
+
+% ── Header / Footer ──────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textcolor{airbnbGrey}{Airbnb Paris — Optimal Pricing Prediction}}
+\fancyhead[R]{\small\textcolor{airbnbGrey}{HEC Paris, May 2026}}
+\fancyfoot[C]{\small\thepage}
+
+% ── Insight boxes ────────────────────────────────────────────
+\newtcolorbox{insightbox}[1][Key Insight]{
+  colback=airbnbLight,
+  colframe=airbnbCoral,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\small\bfseries,
+  title=#1,
+  boxrule=0.8pt
+}
+
+\newtcolorbox{notebox}[1][Note]{
+  colback=airbnbLight,
+  colframe=airbnbGrey,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\small\bfseries,
+  title=#1,
+  boxrule=0.8pt
+}
+
+% ── Misc ─────────────────────────────────────────────────────
+\graphicspath{{./plots/}{./}}
+\setlength{\parskip}{6pt}
+\captionsetup{font=small, labelfont={bf,color=airbnbDark}}
+\onehalfspacing
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+% ── Title page ───────────────────────────────────────────────
+\begin{titlepage}
+  \begin{center}
+    \vspace*{1.5cm}
+    {\color{airbnbCoral}\rule{\textwidth}{3pt}}\\[0.6cm]
+    {\LARGE\bfseries\color{airbnbDark} Optimal Pricing Prediction\\[0.3cm]
+     for Airbnb Listings in Paris}\\[0.4cm]
+    {\color{airbnbCoral}\rule{\textwidth}{1pt}}\\[1.2cm]
+
+    {\large\bfseries Written Report}\\[0.3cm]
+    {\normalsize Business Analytics Using Python}\\[0.1cm]
+    {\normalsize HEC Paris $\cdot$ May 2026}\\[0.1cm]
+    {\normalsize Professor Xitong LI}\\[2cm]
+
+    \begin{tabular}{c@{\hspace{2cm}}c@{\hspace{2cm}}c@{\hspace{2cm}}c}
+      \large\bfseries\color{airbnbCoral} 63\,520 &
+      \large\bfseries\color{airbnbCoral} 8 &
+      \large\bfseries\color{airbnbCoral} R\textsuperscript{2}=0.657 &
+      \large\bfseries\color{airbnbCoral} 4 \\[2pt]
+      \small Filtered listings &
+      \small Models trained &
+      \small Best test R\textsuperscript{2} &
+      \small K-Means segments
+    \end{tabular}
+
+    \vfill
+    {\small\color{airbnbGrey}
+      Data: Kaggle --- Airbnb Paris dataset $\cdot$ 64\,690 Paris listings (raw)\\
+      Platform: Python 3.10 $\cdot$ scikit-learn $\cdot$ XGBoost $\cdot$ Streamlit}
+  \end{center}
+\end{titlepage}
+
+% ── Abstract ─────────────────────────────────────────────────
+\begin{abstract}
+\noindent
+This report presents a data-driven analysis of Airbnb listing prices in Paris, drawing on a dataset of 64\,690 active listings sourced from Kaggle (\url{https://www.kaggle.com/datasets/abaghyangor/airbnb-paris}), filtered to 63\,520 after outlier removal. We address the central question: \textit{what are the key drivers of nightly prices, and can we build a reliable predictive model to help hosts set an optimal price?} Our pipeline combines exploratory data analysis, feature engineering (33 raw columns to 78 candidate features, then 37 selected), supervised regression and classification, amenity value analysis, and unsupervised segmentation. Across eight models, a GridSearch-tuned XGBoost pipeline achieves the strongest out-of-sample performance: R\textsuperscript{2}~=~0.657 on the log-price scale, with a back-transformed MAE of \euro{}27.2 on a median listing price of \euro{}80. Accommodation capacity (\texttt{accommodates}, \texttt{bedrooms}), room type, neighbourhood, and amenity count are the dominant price drivers. K-Means clustering (k~=~4) identifies four economically coherent market segments, independently validated by Ward hierarchical clustering (78\% agreement). These findings are translated into five actionable recommendations for Parisian hosts.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+\subsection{Context and Motivation}
+
+Paris is one of the world's densest short-term rental markets. With over 60\,000 active Airbnb listings concentrated in twenty arrondissements, hosts face a central pricing challenge: set the nightly rate too high and occupancy collapses; set it too low and revenue is left on the table. Yet the majority of hosts rely on intuition, peer comparison, or Airbnb's own opaque Smart Pricing tool, none of which provide transparency into the underlying price drivers or allow hosts to simulate the effect of targeted improvements (adding a dishwasher, moving listing category, etc.).
+
+A data-driven approach that quantifies the marginal contribution of each listing attribute serves two purposes. First, it provides a diagnostic: hosts can see where their listing stands relative to comparable properties after controlling for location and capacity. Second, a calibrated predictive model generates price recommendations that incorporate all observable signals simultaneously, rather than optimising for a single dimension.
+
+\subsection{Core Research Question}
+
+\begin{quote}
+  \textbf{What are the key drivers of Airbnb listing prices in Paris, and can we build a reliable predictive model to help hosts set an optimal price?}
+\end{quote}
+
+\subsection{Analytical Sub-questions}
+
+\begin{enumerate}[leftmargin=2em, itemsep=2pt]
+  \item Which intrinsic property characteristics (type, capacity, amenities) have the greatest impact on price?
+  \item Does location (arrondissement, GPS coordinates, distance to landmarks) account for a significant share of price variance?
+  \item Do reputation signals (average rating, number of reviews, host seniority) influence the listed price?
+  \item Can segmentation reveal homogeneous listing groups corresponding to distinct pricing strategies?
+  \item Which supervised model offers the best and most stable out-of-sample predictive performance?
+\end{enumerate}
+
+\subsection{Report Structure}
+
+Section~\ref{sec:data} describes the dataset and preparation; Section~\ref{sec:eda} presents exploratory findings; Section~\ref{sec:features} covers feature engineering and selection; Section~\ref{sec:supervised} presents regression models with full metric discussion; Section~\ref{sec:classification} covers price tier classification; Section~\ref{sec:amenity} analyses individual amenity premiums; Section~\ref{sec:unsupervised} presents clustering; Section~\ref{sec:recommendations} synthesises business recommendations; Section~\ref{sec:conclusion} addresses limitations and future work.
+
+% ============================================================
+\section{Data}
+\label{sec:data}
+% ============================================================
+
+\subsection{Source and Coverage}
+
+The dataset was sourced from Kaggle (\url{https://www.kaggle.com/datasets/abaghyangor/airbnb-paris}), a community-published collection of Airbnb listing and review data for Paris. The raw file covers a multi-city export (10 cities, \(\approx\)280\,000 rows); after filtering for Paris, the working dataset comprises \textbf{64\,690 listings} across 20 arrondissements, accompanied by \textbf{5.4 million review records} spanning 2010--2025. This dataset was preferred over the original Inside Airbnb source because it provides \texttt{price} as a directly accessible numeric field, whereas the standard Inside Airbnb export required non-trivial parsing to extract pricing data.
+
+This dataset has several schema characteristics that affect the analysis:
+\begin{itemize}[itemsep=2pt]
+  \item \texttt{price} is a plain integer (no currency prefix), already in euros.
+  \item \texttt{review\_scores\_rating} uses a 0--100 scale; sub-scores use a 0--10 scale.
+  \item Several columns absent from typical Airbnb exports: \texttt{beds}, \texttt{bathrooms}, \texttt{cancellation\_policy}, \texttt{availability\_365}, and \texttt{number\_of\_reviews}.
+  \item The Reviews file contains only metadata (date, listing ID, reviewer ID), with no review text.
+\end{itemize}
+
+\subsection{Key Variables}
+
+Table~\ref{tab:features} summarises the feature categories used in modelling.
+
+\begin{table}[H]
+  \centering
+  \caption{Feature categories and representative variables}
+  \label{tab:features}
+  \small
+  \begin{tabularx}{\textwidth}{lXl}
+    \toprule
+    \textbf{Category} & \textbf{Representative variables} & \textbf{Type} \\
+    \midrule
+    Property & \texttt{room\_type}, \texttt{property\_type}, \texttt{accommodates}, \texttt{bedrooms}, \texttt{amenities} & Cat./Num. \\
+    Location & \texttt{neighbourhood\_cleansed}, \texttt{latitude}/\texttt{longitude}, Haversine km to 4 landmarks & Num./Cat. \\
+    Reputation & \texttt{review\_scores\_rating} (0--100), 5 sub-scores (0--10), \texttt{host\_is\_superhost} & Num./Bool. \\
+    Host profile & \texttt{host\_total\_listings\_count}, \texttt{host\_seniority\_days}, \texttt{host\_identity\_verified} & Num./Bool. \\
+    Review activity & \texttt{review\_count}, \texttt{days\_since\_last\_review}, seasonal fractions & Num. \\
+    Booking policy & \texttt{minimum\_nights}, \texttt{instant\_bookable} & Num./Bool. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Data Cleaning and Target Transformation}
+
+\paragraph{Outlier filtering.} Listings priced below the 1st percentile (\euro{}25) or above the 99th percentile (\euro{}600) were removed. This eliminates data-entry errors (prices of \euro{}0 or \euro{}10\,000) and genuine outliers that a standard regression cannot fit well. After filtering, \textbf{63\,520 listings} remain, with prices spanning \euro{}25--\euro{}600.
+
+\paragraph{Missing value imputation.} \texttt{bedrooms} and the six review sub-scores were median-imputed. These fields are missing for approximately 8--15\% of listings (predominantly newer listings with few reviews). Median imputation is conservative and avoids introducing bias from list-wise deletion.
+
+\paragraph{Log transformation of the target.} The raw price distribution is strongly right-skewed (mean \euro{}102, std \euro{}74.6). Training a regression model on the raw price would heavily penalise errors on expensive listings and produce poorly calibrated predictions in the mid-range. We therefore transform the target as:
+\[
+y = \log(1 + \text{price})
+\]
+and back-transform predictions as $\hat{p} = e^{\hat{y}} - 1$. This is a standard and well-justified approach for monetary targets.
+
+\begin{notebox}[On reported metrics]
+Because the model optimises on the log-price scale, \textbf{R\textsuperscript{2} is computed on the log-transformed target} (scale 0--1, where 1 = perfect fit). \textbf{RMSE and MAE, however, are computed on the back-transformed euro scale} (i.e.\ after applying $e^{\hat{y}} - 1$ to each prediction) to give directly interpretable error magnitudes in euros. This mixed reporting is deliberate: R\textsuperscript{2} reflects how well the model explains variation in log-price (its actual training objective), while RMSE/MAE express practical prediction error in the unit hosts care about. One implication is that RMSE on the euro scale is asymmetric---a model that systematically underestimates luxury prices by \euro{}60 and overestimates budget prices by \euro{}15 would show the same RMSE as one with uniform \euro{}47 errors, even though the errors have very different business implications.
+\end{notebox}
+
+% ============================================================
+\section{Exploratory Data Analysis}
+\label{sec:eda}
+% ============================================================
+
+\subsection{Price Distribution}
+
+Figure~\ref{fig:eda_combined} shows the raw and log-transformed price distributions alongside the room-type and neighbourhood breakdowns.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\textwidth]{eda_combined.png}
+  \caption{EDA overview: price distribution (raw and log-transformed), room type breakdown, and neighbourhood price boxplots.}
+  \label{fig:eda_combined}
+\end{figure}
+
+The raw distribution has a long right tail: the median (\euro{}80) is substantially below the mean (\euro{}102), and the standard deviation (\euro{}74.6) exceeds the median---a hallmark of the luxury-skewed Parisian market. The top 1\% of listings exceed \euro{}600 per night, representing hotel rooms and premium apartments in the 7\textsuperscript{e} and 8\textsuperscript{e} arrondissements. After log transformation, the distribution is approximately symmetric and well-suited to standard regression.
+
+\begin{insightbox}
+The \euro{}22 gap between median (\euro{}80) and mean (\euro{}102) is driven entirely by the luxury tail. A host pricing at \euro{}100 is already above the median but below the mean---suggesting most of the ``average'' price is pulled up by a relatively small number of premium listings.
+\end{insightbox}
+
+\subsection{Price by Room Type}
+
+Room type is one of the most discriminating variables in the dataset:
+
+\begin{itemize}[itemsep=3pt]
+  \item \textbf{Hotel rooms} command the highest median price, reflecting professional management, prime locations, and amenity packages that private hosts rarely match.
+  \item \textbf{Entire apartments} are markedly more expensive than private rooms, with minimal distributional overlap. This reflects both the practical value of exclusivity and the ability to accommodate larger groups.
+  \item \textbf{Private rooms} represent the largest share of listings (approximately 40\%) and cluster tightly around \euro{}50--\euro{}70 per night.
+  \item \textbf{Shared rooms} form a marginal niche ($<$2\% of listings) at the lowest price tier, primarily targeting backpacker travellers.
+\end{itemize}
+
+The room-type hierarchy has a direct implication for hosts: switching a listing from ``Private room'' to ``Entire apartment'' (e.g.\ by ensuring no resident occupancy during guest stays) is one of the largest discrete price levers available.
+
+\subsection{Geography and Neighbourhood Pricing}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.46\textwidth}
+    \includegraphics[width=\textwidth]{geo_scatter.png}
+    \caption{Geographic scatter (colour = price quartile).}
+    \label{fig:geo}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.52\textwidth}
+    \includegraphics[width=\textwidth]{price_by_neighbourhood.png}
+    \caption{Median price by arrondissement.}
+    \label{fig:neighbourhood}
+  \end{subfigure}
+  \caption{Geographic distribution and neighbourhood price variation. Colour-coded dots in (a) show clear spatial price stratification: premium listings concentrate in central and western Paris.}
+\end{figure}
+
+The neighbourhood boxplot reveals three distinct price bands:
+\begin{enumerate}[itemsep=2pt]
+  \item \textbf{Premium core} (7\textsuperscript{e}, 8\textsuperscript{e}, 1\textsuperscript{er}, 6\textsuperscript{e}): median price \euro{}120--\euro{}160. These central arrondissements combine historic prestige, tourist density, and proximity to landmarks.
+  \item \textbf{Mid-tier inner ring} (2\textsuperscript{e}--5\textsuperscript{e}, 9\textsuperscript{e}--16\textsuperscript{e}): median price \euro{}80--\euro{}110. Strong demand but less extreme concentration.
+  \item \textbf{Outer and peripheral} (17\textsuperscript{e}--20\textsuperscript{e}): median price \euro{}55--\euro{}75. Greater supply, lower tourist density, lower price floor.
+\end{enumerate}
+
+Interestingly, the geographic scatter (Figure~\ref{fig:geo}) also shows significant within-arrondissement variance: a listing on the Île de la Cité commands very different prices depending on the floor, the facing, and the amenity set. This within-neighbourhood heterogeneity is part of why the model R\textsuperscript{2} is bounded below 0.70 even with neighbourhood dummies included.
+
+\subsection{Correlation Analysis}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{correlation_heatmap.png}
+    \caption{Full Pearson correlation heatmap.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{pearson_correlation.png}
+    \caption{Top correlations with log-price.}
+  \end{subfigure}
+  \caption{Correlation analysis. Capacity features dominate; review sub-scores are moderately correlated with each other (multicollinearity risk).}
+  \label{fig:corr}
+\end{figure}
+
+The Pearson correlation analysis on the log-price target reveals a clear hierarchy:
+\begin{itemize}[itemsep=3pt]
+  \item \texttt{accommodates} leads with $r = 0.54$: the number of guests a listing can host is the single strongest linear predictor of price. Every additional guest slot is associated with a systematic price increment, consistent with the ``price per person'' logic.
+  \item \texttt{bedrooms} ($r \approx 0.48$) is highly collinear with \texttt{accommodates} but not redundant: two listings both accommodating 4 guests may have 1 or 2 bedrooms, and the additional bedroom captures a distinct privacy premium.
+  \item \texttt{amenities\_count} ($r \approx 0.40$): total number of amenities acts as a quality composite signal. Its correlation is partially mediated by property size (larger properties tend to have more amenities), but it retains independent predictive power after controlling for capacity.
+  \item \textbf{Review sub-scores} show modest positive correlations ($r \approx 0.10$--$0.20$) with price. Hosts in premium segments tend to invest more in presentation and service, generating higher ratings---but the direction is partially reverse-causal: higher-priced listings attract guests with higher expectations, which can reduce scores.
+  \item \texttt{minimum\_nights} shows a negative correlation: listings with long minimum-stay requirements (e.g.\ 30+ nights) are typically priced lower per night due to medium-term discount conventions.
+\end{itemize}
+
+\begin{insightbox}[Multicollinearity note]
+The six review sub-scores are strongly intercorrelated (pairwise $r > 0.6$). Including all of them in a linear model would inflate coefficient standard errors. Lasso feature selection (Section~\ref{sec:features}) naturally handles this by driving redundant coefficients toward zero.
+\end{insightbox}
+
+\subsection{Review Activity as a Booking Proxy}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{review_temporal.png}
+  \caption{Monthly review volume across all Paris listings (2010--2025). Review volume proxies booking activity since only verified stays generate reviews.}
+  \label{fig:reviews}
+\end{figure}
+
+Five patterns stand out in the temporal review series:
+
+\begin{enumerate}[itemsep=3pt]
+  \item \textbf{Secular growth}: review volume grew from near-zero in 2010 to approximately 250\,000 per month in 2019, reflecting Airbnb's platform expansion in Paris.
+  \item \textbf{Summer seasonality}: clear annual peaks each July--August, consistent with Paris's tourism calendar. The seasonal amplitude increased with overall volume.
+  \item \textbf{COVID-19 collapse}: review activity fell by approximately 95\% from March 2020, reaching near-zero by April 2020. The recovery was gradual through 2021, with meaningful volumes resuming only from mid-2022.
+  \item \textbf{Post-COVID rebound}: by 2023--2024, monthly review volumes exceeded the 2019 peak, suggesting the Paris short-term rental market has fully recovered and grown.
+  \item \textbf{Active listings}: 48\,555 of 64\,690 listings (75\%) hold at least one review, confirming broad market participation and limiting potential selection bias in review-based features.
+\end{enumerate}
+
+\subsection{Seasonal Decomposition}
+
+An STL decomposition (period = 12 months) of the aggregate monthly review time series reveals the structural components of market activity:
+\begin{itemize}[itemsep=2pt]
+  \item \textbf{Trend} accounts for \textbf{85.0\%} of total variance (trend strength $F_t = 0.877$), confirming that the dominant signal is long-term platform growth, not seasonal cycles.
+  \item \textbf{Seasonal} component accounts for only \textbf{1.8\%} of variance (seasonal strength $F_s = 0.015$). This low figure reflects the fact that seasonal fluctuations, while visually prominent in the raw series, are dwarfed by the multi-year growth trend.
+  \item \textbf{Residual} accounts for 13.2\%, capturing the COVID shock and other irregular events.
+\end{itemize}
+
+The practical implication is that hosts should not expect large systematic revenue differences across summer versus winter beyond the general trend---though individual listing seasonality may differ substantially from the city aggregate.
+
+% ============================================================
+\section{Feature Engineering and Selection}
+\label{sec:features}
+% ============================================================
+
+\subsection{Feature Engineering Pipeline}
+
+Starting from 33 raw columns, 78 candidate features were constructed. Table~\ref{tab:engineering} details each step and its rationale.
+
+\begin{table}[H]
+  \centering
+  \caption{Feature engineering steps, outputs, and rationale}
+  \label{tab:engineering}
+  \small
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    \textbf{Step} & \textbf{Output} & \textbf{Rationale} \\
+    \midrule
+    Outlier filter & Price clipped to p1--p99: \euro{}25--\euro{}600 & Removes data-entry errors and extreme luxury outliers that distort fitting \\
+    Median imputation & \texttt{bedrooms} + 6 review sub-scores & Preserves observations without introducing distributional bias \\
+    Amenity parsing & 618 unique strings $\rightarrow$ 10 binary high-value flags & Reduces dimensionality while preserving economically meaningful amenity distinctions \\
+    One-hot encoding & \texttt{room\_type} (4), \texttt{neighbourhood} (20), \texttt{property\_type} top-10 & Allows non-linear, non-monotone effects of categorical variables \\
+    Landmark distances & Haversine km to Eiffel Tower, Louvre, Notre-Dame, Opéra Garnier & Converts raw GPS to meaningful geographic proximity signals \\
+    Review join & \texttt{review\_count}, \texttt{days\_since\_last\_review} & Proxies for listing activity and demand without requiring booking data \\
+    Seasonal features & Winter/Spring/Summer/Autumn review fractions + concentration index & Captures whether a listing benefits more from tourist vs.\ local demand \\
+    Log target & $y = \log(1 + \text{price})$ & Normalises right-skewed distribution; see Section~\ref{sec:data} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Feature Selection: Three Complementary Methods}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{feature_selection_3panel.png}
+  \caption{Feature selection panel: Pearson correlations with log-price (left), Lasso regression coefficients (centre), Random Forest impurity-based importances (right).}
+  \label{fig:feature_selection}
+\end{figure}
+
+\paragraph{Pearson Correlation.} Univariate correlations identify \texttt{accommodates} ($r = 0.54$) as the strongest individual predictor, followed by \texttt{bedrooms} and \texttt{amenities\_count}. Correlations are computed on the log-price target to match the model's objective. The limitation of this approach is that it cannot capture interaction effects or non-linear relationships.
+
+\paragraph{Lasso Regression (L1 regularisation).} A cross-validated Lasso ($\alpha = 0.0004$, 5-fold CV) retains 67 of 73 features, driving only six features' coefficients exactly to zero. This confirms that the feature engineering has produced an informationally rich set with little true redundancy, and that the primary role of Lasso is to shrink rather than eliminate. The Lasso coefficient magnitudes weight neighbourhood dummies (7\textsuperscript{e}, 8\textsuperscript{e}) and room type (``Entire home'') among the highest.
+
+\paragraph{Random Forest Importance.} The Random Forest assigns \textbf{44\% of total impurity reduction to \texttt{bedrooms}} alone---nearly three times the contribution of the next feature. This high concentration reflects the strong and non-linear relationship between bedroom count and price: the premium for going from 0 to 1 bedroom is different from going from 2 to 3 bedrooms, a non-linearity that neither Pearson nor Lasso capture fully.
+
+\paragraph{Final feature matrix.} The union of the top-30 Lasso features and top-20 Random Forest features yields a \textbf{37-feature matrix on 63\,520 listings}. This is the input to all supervised models.
+
+\begin{insightbox}[What the three methods agree on]
+Across all three selection methods, the same five variables consistently rank at the top: \texttt{bedrooms}, \texttt{accommodates}, \texttt{amenities\_count}, neighbourhood dummies (especially central arrondissements), and room type (``Entire home / apt''). This convergence across linear, regularised, and tree-based methods provides strong evidence that these are genuine, robust price drivers rather than artefacts of one method's assumptions.
+\end{insightbox}
+
+% ============================================================
+\section{Supervised Learning: Price Prediction}
+\label{sec:supervised}
+% ============================================================
+
+\subsection{Experimental Setup}
+
+\begin{itemize}[itemsep=2pt]
+  \item \textbf{Split}: 80/20 train/test (stratified by price decile to ensure similar price distributions in both sets).
+  \item \textbf{Cross-validation}: 5-fold KFold on the training set, used to estimate generalisation performance and tune hyperparameters.
+  \item \textbf{Target}: log-transformed price $y = \log(1 + \text{price})$.
+  \item \textbf{Scaling}: features standardised (zero mean, unit variance) for linear models and MLP; tree-based models (RF, XGBoost, DT) trained on unscaled features as they are scale-invariant.
+  \item \textbf{Metric reporting}: R\textsuperscript{2} on the log-price scale; RMSE and MAE on the back-transformed euro scale (median listing price: \euro{}80, mean: \euro{}102).
+\end{itemize}
+
+\subsection{Model Comparison}
+
+Eight models were trained and evaluated. Table~\ref{tab:models} reports all metrics with cross-validation uncertainty.
+
+\begin{table}[H]
+  \centering
+  \caption{Full regression model performance. R\textsuperscript{2} is on log-price; RMSE and MAE are back-transformed to euros.}
+  \label{tab:models}
+  \small
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Model} & \textbf{Test R\textsuperscript{2}} & \textbf{RMSE (\euro{})} & \textbf{MAE (\euro{})} & \textbf{CV R\textsuperscript{2} (mean $\pm$ std)} \\
+    \midrule
+    \rowcolor{airbnbCoral!15}
+    Tuned XGBoost (pipeline) & \textbf{0.657} & \textbf{47.3} & \textbf{27.2} & 0.651 $\pm$ 0.009 \\
+    Stacking Ensemble        & 0.649 & 47.9 & 27.6 & 0.644 $\pm$ 0.007 \\
+    XGBoost (default)        & 0.646 & 48.4 & 27.8 & 0.642 $\pm$ 0.006 \\
+    MLP Neural Network       & 0.600 & 50.5 & 29.6 & 0.561 $\pm$ 0.054 \\
+    Random Forest            & 0.601 & 52.1 & 29.7 & 0.596 $\pm$ 0.006 \\
+    Linear Regression        & 0.539 & 56.6 & 32.4 & 0.524 $\pm$ 0.011 \\
+    Ridge Regression         & 0.539 & 56.6 & 32.4 & 0.524 $\pm$ 0.011 \\
+    Decision Tree            & 0.512 & 55.9 & 32.9 & 0.506 $\pm$ 0.009 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.54\textwidth}
+    \includegraphics[width=\textwidth]{model_comparison_full.png}
+    \caption{RMSE and MAE across all eight models.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.44\textwidth}
+    \includegraphics[width=\textwidth]{model_r2_errorbars.png}
+    \caption{R\textsuperscript{2} with 5-fold CV error bars.}
+  \end{subfigure}
+  \caption{Model performance comparison. Error bars in (b) show 5-fold CV standard deviation---a wide bar means the model is sensitive to the training subset.}
+  \label{fig:models}
+\end{figure}
+
+\subsection{Interpreting the Results}
+
+\paragraph{Why do linear models plateau at R\textsuperscript{2}~$\approx$~0.54?}
+Linear regression and Ridge achieve nearly identical results (R\textsuperscript{2}~=~0.539), with Ridge providing no benefit because the L2 penalty does not help when predictors are already well-conditioned after Lasso selection. The plateau at 0.54 reflects the ceiling of what additive linear combinations of features can explain. The residual 46\% includes genuinely non-linear effects (the premium for going from 1 to 3 bedrooms is not three times the 0-to-1 premium), interaction effects (a pool matters far more in the 8\textsuperscript{e} than in the 19\textsuperscript{e}), and irreducible noise (décor quality, photo composition, host responsiveness) that is not captured in structured metadata.
+
+\paragraph{Why does XGBoost gain +15 R\textsuperscript{2} points over linear models?}
+XGBoost captures interaction effects and non-monotone relationships through recursive binary splits. The model implicitly learns, for example, that ``an entire apartment with 3+ bedrooms in the 7\textsuperscript{e}'' is a super-premium category that a linear model would underestimate even with all features included. The +15 R\textsuperscript{2} point gain corresponds to a RMSE improvement from \euro{}56.6 to \euro{}47.3---an economically significant \textbf{16\% reduction in prediction error}.
+
+\paragraph{Decision Tree underperforms Random Forest.}
+A single tree (depth 8) achieves R\textsuperscript{2}~=~0.512 with RMSE~=~\euro{}55.9---worse than linear regression on R\textsuperscript{2}. This is surprising at first glance, since trees can in principle capture non-linearities. The explanation is overfitting: a single tree memorises training data patterns that do not generalise, a problem that Random Forest corrects through averaging 200 trees. The Decision Tree's lower RMSE than Linear Regression despite lower R\textsuperscript{2} illustrates the mixed-scale metric issue: the tree avoids large euro errors on high-price listings (which dominate RMSE) while having higher variance in the mid-range (which dominates R\textsuperscript{2}).
+
+\paragraph{The MLP: competitive performance, high instability.}
+The MLP (128~$\rightarrow$~64 neurons, ReLU, Adam, early stopping) achieves test R\textsuperscript{2}~=~0.600---competitive with Random Forest. However, its 5-fold CV standard deviation of \textbf{0.054} is nine times larger than XGBoost's (0.006). This means the MLP's performance depends heavily on which 80\% of training data it sees: on a good fold it approaches XGBoost; on a bad fold it may not significantly outperform linear regression. For deployment, this instability is unacceptable---a price recommendation tool cannot afford large variance in its outputs.
+
+\paragraph{Stacking adds marginal value.}
+The stacking ensemble (Linear Regression + Random Forest + XGBoost base learners; Ridge meta-learner) achieves R\textsuperscript{2}~=~0.649, marginally below the tuned XGBoost. This suggests that XGBoost already captures most of the signal extractable from the features, and that the linear and RF base learners add little complementary information. The stacking overhead (three models trained plus a meta-learner) is not justified by the performance gain.
+
+\paragraph{What does MAE~=~\euro{}27.2 mean in practice?}
+On a median listing price of \euro{}80, a MAE of \euro{}27.2 represents a \textbf{34\% relative error}. This sounds large, but context matters:
+\begin{itemize}[itemsep=2pt]
+  \item For a \euro{}80 listing, the model's typical prediction lies in the range \euro{}53--\euro{}107---a useful anchor but not a precise target.
+  \item For a \euro{}200 listing, the same absolute error represents only 14\% relative error, and the model is more reliable in this range.
+  \item The irreducible noise from unobserved listing quality (décor, photo quality, host personality) is estimated at \euro{}15--25 even with perfect features---suggesting the model is approaching the practical ceiling given available data.
+\end{itemize}
+
+\subsection{XGBoost: Feature Importance and Residuals}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.50\textwidth}
+    \includegraphics[width=\textwidth]{rf_importance.png}
+    \caption{Top feature importances (XGBoost gain-based).}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{xgb_residuals.png}
+    \caption{Residuals vs.\ predicted price.}
+  \end{subfigure}
+  \caption{XGBoost model diagnostics.}
+  \label{fig:xgb}
+\end{figure}
+
+The XGBoost feature importance confirms the findings from the selection phase: \texttt{bedrooms} and \texttt{accommodates} dominate, followed by neighbourhood dummies for premium arrondissements and amenity count. Notably, distance to the Eiffel Tower appears in the top-10 importances---confirming that location granularity beyond the arrondissement adds signal.
+
+The residual plot (Figure~\ref{fig:xgb}b) shows residuals centred near zero across the predicted price range from \euro{}25 to \euro{}250, confirming the model is \textbf{unbiased in the central mass of the distribution}. Above \euro{}250, residual variance fans out noticeably: the model under-predicts some luxury listings and over-predicts others, reflecting the sparsity of training examples in the \euro{}300--\euro{}600 range and the greater influence of unobserved quality signals at that tier.
+
+\subsection{GridSearch Hyperparameter Tuning}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\textwidth]{gridsearch_heatmap.png}
+  \caption{GridSearchCV R\textsuperscript{2} heatmap for XGBoost (5-fold CV). Deeper trees and more estimators generally outperform, with the improvement saturating at depth 7 and 300 trees.}
+  \label{fig:gridsearch}
+\end{figure}
+
+The GridSearch explored the space $\{$\texttt{learning\_rate}: 0.05, 0.1; \texttt{max\_depth}: 3, 5, 7; \texttt{n\_estimators}: 100, 300; \texttt{subsample}: 0.8$\}$ (12 configurations, 60 fits total). The optimal configuration is \texttt{learning\_rate}~=~0.05, \texttt{max\_depth}~=~7, \texttt{n\_estimators}~=~300, achieving CV R\textsuperscript{2}~=~0.651. Key observations from the heatmap:
+\begin{itemize}[itemsep=2pt]
+  \item Depth 3 (shallow trees) consistently underperforms regardless of learning rate---insufficient capacity to model the price non-linearities.
+  \item The benefit of increasing from depth 5 to depth 7 is modest (+0.006 R\textsuperscript{2}), suggesting diminishing returns from further tree depth.
+  \item Lower learning rate (0.05) outperforms 0.10 because it allows the ensemble to make finer corrections through more iterations without overshooting.
+\end{itemize}
+
+\subsection{MLP Neural Network Training Dynamics}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\textwidth]{mlp_loss_curve.png}
+  \caption{MLP training and validation loss curves. Early stopping with patience~=~20 triggered at approximately epoch 80, preventing overfitting.}
+  \label{fig:mlp}
+\end{figure}
+
+The MLP loss curve shows rapid descent in the first 20 epochs as the network learns the dominant linear relationships (capacity, room type), followed by slower improvement as it gradually captures non-linearities. The train--validation gap, while small in absolute terms, widens progressively---explaining the model's higher CV variance relative to XGBoost. Early stopping is essential: without it, the network would continue reducing training loss while validation loss stagnates, resulting in a worse-generalising model.
+
+% ============================================================
+\section{Classification: Price Tier Prediction}
+\label{sec:classification}
+% ============================================================
+
+\subsection{Task Definition}
+
+Alongside the continuous regression task, a complementary \textbf{three-class classification} problem was formulated: predict whether a listing falls in the Budget, Mid-Range, or Premium price tier. Tiers are defined by quantile cut to ensure balanced classes:
+
+\begin{itemize}[itemsep=2pt]
+  \item \textbf{Budget}: nightly price \euro{}25--\euro{}65 (21\,927 listings, 34.5\% of filtered set)
+  \item \textbf{Mid-Range}: \euro{}66--\euro{}100 (22\,057 listings, 34.7\%)
+  \item \textbf{Premium}: \euro{}101--\euro{}600 (19\,536 listings, 30.8\%)
+\end{itemize}
+
+\subsection{Results and Interpretation}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.93\textwidth]{classification_confusion.png}
+  \caption{Confusion matrices for price tier classification across three classifiers. Each row is the true tier; each column is the predicted tier.}
+  \label{fig:classification}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Classification performance by tier (Logistic Regression results)}
+  \label{tab:classification}
+  \small
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Tier} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+    \midrule
+    Budget      & 0.67 & 0.71 & 0.69 & 4\,366 \\
+    Mid-Range   & 0.51 & 0.52 & 0.51 & 4\,385 \\
+    Premium     & 0.74 & 0.68 & 0.70 & 3\,953 \\
+    \midrule
+    Weighted avg & 0.63 & 0.63 & 0.63 & 12\,704 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Several patterns in the confusion matrices deserve interpretation:
+
+\paragraph{Why is Mid-Range the hardest tier to classify?}
+Mid-Range listings (\euro{}66--\euro{}100) straddle two fuzzy price boundaries: they differ from Budget listings by a relatively small margin (\euro{}40 range overlap in real estate vocabulary), and a well-appointed \euro{}100 apartment and a modest-but-central \euro{}100 listing may have nearly identical feature profiles. The F1 of 0.51 for Mid-Range (vs. 0.69--0.70 for Budget and Premium) reflects this boundary ambiguity. In practice, the classifier is most useful for confident Budget/Premium identification; Mid-Range is better handled by the regression model.
+
+\paragraph{Asymmetric errors.}
+Budget listings are misclassified as Mid-Range more often than as Premium---because a cheap listing with good amenities looks ``mid-range'' to a classifier that cannot see the neighbourhood sub-block or the building quality. Premium listings are occasionally misclassified as Mid-Range, typically for well-equipped listings in non-central arrondissements where the price premium is driven by quality rather than location.
+
+\paragraph{Gradient Boosting outperforms Logistic Regression.}
+Consistent with the regression results, Gradient Boosting captures non-linear tier boundaries better than the linear classifier, gaining approximately 5 percentage points in weighted F1. The Random Forest performance is intermediate.
+
+% ============================================================
+\section{Amenity Analysis}
+\label{sec:amenity}
+% ============================================================
+
+\subsection{Methodology}
+
+For each of 76 amenities present in at least 500 listings, the \textbf{median price premium} was computed as:
+\[
+\text{Premium}_a = \text{Median}(\text{price} \mid a = 1) - \text{Median}(\text{price} \mid a = 0)
+\]
+where $a = 1$ indicates the amenity is present. This approach is unconditional: it does not control for property size or location, so some of the observed premium reflects the confounding fact that large, centrally located listings tend to have more amenities. The results should therefore be interpreted as \textit{descriptive} associations rather than causal effects.
+
+\subsection{Results: Which Amenities Add Value?}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.56\textwidth}
+    \includegraphics[width=\textwidth]{amenity_premium.png}
+    \caption{Median price premium for top amenities.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.42\textwidth}
+    \includegraphics[width=\textwidth]{amenity_frequency.png}
+    \caption{Amenity prevalence across listings.}
+  \end{subfigure}
+  \caption{Amenity price premiums and frequency. Amenities in the upper-left quadrant of the combined view (high premium, low frequency) offer the greatest differentiation opportunity.}
+  \label{fig:amenity}
+\end{figure}
+
+The amenity analysis yields three actionable findings:
+
+\paragraph{Luxury amenities: high premium, low penetration.} Pool, hot tub, and sauna command premiums of \euro{}60--\euro{}120 per night, but are present in fewer than 2\% of listings. They are relevant only for luxury-segment properties; investing in a pool for a standard Paris apartment is neither feasible nor financially justified.
+
+\paragraph{Convenience amenities: moderate premium, broadly accessible.} Elevator access, air conditioning, and a dishwasher each carry premiums of \euro{}15--\euro{}30 and are achievable renovation investments for most Haussmann apartment owners. For a host currently priced at \euro{}80, installing an elevator (if the building allows) could justify moving to \euro{}95--\euro{}100, improving occupancy through competitive positioning.
+
+\paragraph{Universal amenities: near-zero marginal premium.} Wifi is present in over 95\% of listings; Kitchen in over 85\%. Their premium is near zero because the market treats them as table stakes---\textit{not} having them depresses price below the market rate, but having them does not lift price above it. This is an important asymmetry: amenity analysis should focus on avoiding deficits as much as capturing upside.
+
+\subsection{Amenity-Only Decision Tree}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{amenity_decision_tree.png}
+  \caption{Decision tree (depth 3) trained exclusively on 76 binary amenity features. Accuracy on the held-out test set: 49\%.}
+  \label{fig:tree}
+\end{figure}
+
+A decision tree trained on amenity features alone achieves 49\% accuracy on the three-tier classification task (against a 33\% random baseline). The cross-validated R\textsuperscript{2} for the amenity-only regressor (depth 4) is 0.226, meaning amenities alone explain approximately \textbf{23\% of price variance}. The first splits in the tree---on elevator presence, A/C, and kitchen type---reflect the most informative amenity partitions of the Budget/Premium boundary. The residual 77\% of variance is explained primarily by location, capacity, and host profile---features not included in the amenity-only model. This decomposition confirms that amenity upgrades, while valuable, are secondary to capacity and location as pricing levers.
+
+% ============================================================
+\section{Unsupervised Learning: Listing Segmentation}
+\label{sec:unsupervised}
+% ============================================================
+
+\subsection{Clustering Design}
+
+K-Means was applied to six standardised features: \texttt{accommodates}, \texttt{bedrooms}, \texttt{amenities\_count}, \texttt{review\_scores\_rating} (normalised to 0--5 scale), \texttt{host\_total\_listings\_count}, and \texttt{price}. Location features were \textbf{deliberately excluded} so that clusters reflect \textit{what a listing is} (its property profile and price point) rather than \textit{where it is}. This makes the geographic distribution of clusters (Section~\ref{subsec:cluster_geo}) an independent validation test.
+
+\subsection{Selecting k~=~4}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.74\textwidth]{elbow_silhouette.png}
+  \caption{Elbow curve (inertia, left axis) and silhouette scores (right axis) for K-Means with k from 2 to 10.}
+  \label{fig:elbow}
+\end{figure}
+
+The elbow criterion shows inertia flattening after k~=~4. The silhouette score peaks at k~=~2 (score = 0.435), as is typical: k~=~2 produces the most internally compact clusters but collapses meaningful sub-segments. At k~=~4, the silhouette score (0.31) is still acceptable while providing an economically interpretable four-way segmentation. The choice of k~=~4 is further supported by Ward hierarchical clustering, which naturally cuts to four groups with 78.2\% overlap with the K-Means assignment.
+
+\subsection{Cluster Profiles}
+
+\begin{table}[H]
+  \centering
+  \caption{K-Means cluster profiles (k = 4). Values are cluster means across the six clustering features.}
+  \label{tab:clusters}
+  \small
+  \begin{tabular}{lrrrrrrl}
+    \toprule
+    \textbf{Segment} & \textbf{n} & \textbf{Guests} & \textbf{Beds} & \textbf{Amenities} & \textbf{Rating} & \textbf{Avg. \euro{}} & \textbf{Host scale} \\
+    \midrule
+    Spacious \& Premium  & 7\,901  & 5.61 & 2.51 & 21.9 & 4.74/5 & 236 & 44.7 listings \\
+    Quality Mid-Range    & 19\,570 & 2.88 & 1.13 & 25.5 & 4.76/5 & 97  & 8.9 listings  \\
+    Standard Compact     & 31\,371 & 2.48 & 1.09 & 12.0 & 4.76/5 & 75  & 4.1 listings  \\
+    Low-Rated Fringe     & 4\,678  & 2.84 & 1.13 & 14.7 & 3.69/5 & 79  & 16.1 listings \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{cluster_profiles.png}
+  \caption{Cluster profile comparison across the six clustering features (standardised). Each cluster occupies a distinct region of the feature space.}
+  \label{fig:cluster_profiles}
+\end{figure}
+
+Interpreting each segment in depth:
+
+\paragraph{Cluster 0 — Spacious \& Premium (7\,901 listings, 12.4\%).}
+These listings accommodate 5.6 guests on average with 2.5 bedrooms---the large-format Paris apartments and townhouses primarily found in the 7\textsuperscript{e}, 8\textsuperscript{e}, and 16\textsuperscript{e}. Their average price of \euro{}236 is three times the market median. Hosts in this segment manage 44.7 listings on average, suggesting professional property management companies or institutional investors operating multi-unit portfolios. Amenity count is moderate (22)---these listings rely on space and location more than amenity breadth.
+
+\paragraph{Cluster 1 — Quality Mid-Range (19\,570 listings, 30.8\%).}
+The defining characteristic of this cluster is the \textbf{highest amenity count (25.5 per listing)} despite a modest price of \euro{}97. These are 1-bedroom listings with a committed host (averaging 9 listings) who has invested in equipping the property well. The high amenity count relative to price suggests these hosts are competing on quality rather than location. This cluster is the most competitive segment: buyers receive good value, and hosts with under-amenitised listings are directly disadvantaged.
+
+\paragraph{Cluster 2 — Standard Compact (31\,371 listings, 49.4\%).}
+The largest cluster, representing nearly half of all Paris listings. These are compact 1-bedroom or studio apartments ($\approx$2.5 guests) with a bare-bones amenity set (12 per listing) and the lowest host scale (4.1 listings average---consistent with a single individual renting their personal apartment). Average price of \euro{}75 is just below the market median. This is the ``default'' Parisian Airbnb listing: a private individual occasionally renting their apartment while they travel.
+
+\paragraph{Cluster 3 — Low-Rated Fringe (4\,678 listings, 7.4\%).}
+This segment is the most analytically interesting. Its average price (\euro{}79) is similar to the Standard Compact cluster, but its average rating of 3.69/5 is dramatically lower than the other three clusters (all rated 4.74--4.76/5). These listings are priced as if they compete with the Standard Compact segment but deliver a significantly inferior guest experience. The host scale is intermediate (16 listings average)---suggesting small professional operators who have not invested in quality management. This segment likely suffers from poor occupancy despite competitive pricing, representing the ``value trap'' of the Parisian market.
+
+\begin{insightbox}[The rating gap]
+Clusters 0, 1, and 2 all achieve ratings of 4.74--4.76 / 5, which is an astonishingly compressed range for nearly 63\,000 listings. This suggests that the Airbnb rating system creates a strong floor effect: listings rated below 4.5 face booking pressure from the platform's ranking algorithm, so surviving listings cluster near 4.75. Cluster 3's rating of 3.69 is therefore a strong signal of structural underperformance, not merely marginal underperformance.
+\end{insightbox}
+
+\subsection{Validation: Hierarchical Clustering and Dimensionality Reduction}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.50\textwidth}
+    \includegraphics[width=\textwidth]{cluster_pca.png}
+    \caption{PCA 2D projection (linear).}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.47\textwidth}
+    \includegraphics[width=\textwidth]{dendrogram.png}
+    \caption{Ward dendrogram (2\,000-listing sample).}
+  \end{subfigure}
+  \caption{Cluster validation. PCA shows clear separation on PC1 (driven by capacity and price); Ward hierarchical clustering achieves 78.2\% overlap with K-Means at the k=4 cut.}
+  \label{fig:cluster_validation}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{tsne.png}
+  \caption{t-SNE projection of the full 37-feature space, coloured by K-Means cluster. Non-linear separation between segments is visible, confirming that cluster structure persists beyond the six clustering features. Note: t-SNE inter-cluster distances are not interpretable.}
+  \label{fig:tsne}
+\end{figure}
+
+The PCA projection shows that the Spacious \& Premium cluster (Cluster 0) is cleanly separated along PC1 (the capacity--price axis), while Clusters 1, 2, and 3 are closer together and distinguished primarily along PC2 (the amenity--rating axis). The t-SNE projection of the full 37-feature space confirms that this separation holds in a much richer feature space: the four clusters form distinct local neighbourhoods in the t-SNE map.
+
+\subsection{Geographic Distribution of Clusters}
+\label{subsec:cluster_geo}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.74\textwidth]{cluster_map_paris.png}
+  \caption{Geographic distribution of K-Means clusters across Paris. Clusters were computed without location features; the spatial pattern emerges independently from property characteristics.}
+  \label{fig:cluster_map}
+\end{figure}
+
+Since location features were excluded from clustering, the spatial pattern of clusters in Figure~\ref{fig:cluster_map} constitutes an independent validation test. Several patterns emerge:
+
+\begin{itemize}[itemsep=4pt]
+  \item \textbf{Spacious \& Premium} listings (Cluster 0) are heavily concentrated in the western and central arrondissements (7\textsuperscript{e}, 8\textsuperscript{e}, 16\textsuperscript{e}), which are also the highest-price neighbourhoods in the EDA. The fact that the clustering algorithm placed these listings in a distinct segment purely on the basis of size, amenities, and price---and they ended up being spatially clustered in the premium neighbourhoods---confirms that property characteristics and location are jointly determined. Large, well-priced apartments are located in premium neighbourhoods, and premium neighbourhoods attract large, well-priced apartments.
+
+  \item \textbf{Standard Compact} listings (Cluster 2) are uniformly distributed across all arrondissements, confirming their status as the ``default'' listing type across the entire market.
+
+  \item \textbf{Low-Rated Fringe} listings (Cluster 3) show a slight concentration in the peripheral arrondissements (18\textsuperscript{e}--20\textsuperscript{e}), consistent with lower quality management at the market periphery, though they appear throughout the city.
+\end{itemize}
+
+% ============================================================
+\section{Business Recommendations}
+\label{sec:recommendations}
+% ============================================================
+
+Based on the full analytical pipeline, five data-driven recommendations are offered for Parisian Airbnb hosts:
+
+\begin{enumerate}[leftmargin=2em, itemsep=8pt]
+
+  \item \textbf{Invest in accommodation capacity as the primary pricing lever.}
+  \texttt{accommodates} and \texttt{bedrooms} are the two strongest price predictors across every method (Pearson, Lasso, Random Forest, XGBoost importance). A listing that can accommodate four guests instead of two can realistically command \euro{}40--\euro{}60 more per night, a substantially higher return than any single amenity upgrade. Hosts should maximise legal occupancy declarations and consider whether convertible furniture (sofa beds) can shift their listing from the 2-guest to the 4-guest tier.
+
+  \item \textbf{Target the amenity gap identified by the Quality Mid-Range cluster.}
+  Cluster 1 (Quality Mid-Range) achieves an average amenity count of 25.5 versus the Standard Compact cluster's 12.0---while priced at a comparable \euro{}97 (vs. \euro{}75). The \euro{}22 premium is partially driven by amenities. For hosts currently in the Standard Compact segment, upgrading to elevator access, A/C, and a dishwasher (each carrying premiums of \euro{}15--\euro{}30 in the unconditional amenity analysis) represents the highest-return investment in amenities.
+
+  \item \textbf{Benchmark against the neighbourhood median, not the city average.}
+  The city-wide median is \euro{}80, but arrondissement medians range from \euro{}55 (19\textsuperscript{e}) to \euro{}155 (8\textsuperscript{e}). A host in the 8\textsuperscript{e} pricing at the city median is heavily under-pricing; a host in the 19\textsuperscript{e} at \euro{}80 is above-market. Figure~\ref{fig:neighbourhood} provides the neighbourhood median reference.
+
+  \item \textbf{Use the tuned XGBoost model as a pricing anchor, not a precise target.}
+  The model's MAE of \euro{}27.2 on a \euro{}80 median implies a practical confidence interval of approximately $\pm$\euro{}25--\euro{}30 for central-range listings. Hosts should treat the model output as a pricing anchor and adjust upward for unobserved quality (professional photos, fast response rate, unique décor) or downward for known deficits. The model is most reliable for standard 1-2 bedroom apartments in central arrondissements; it is least reliable for luxury listings above \euro{}300.
+
+  \item \textbf{Exit the Low-Rated Fringe segment proactively.}
+  Hosts whose listing profile maps to Cluster 3 (low ratings, multi-listing host, standard price point) face the worst competitive position: they price like Cluster 2 (Standard Compact) but deliver a sub-par experience that will trigger platform de-ranking and eventual delisting. The corrective actions are different from other clusters: the priority is not pricing adjustment but guest experience improvement---faster response times, higher cleaning standards, accurate listing descriptions to manage expectations.
+
+\end{enumerate}
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+\subsection{Summary of Findings}
+
+This analysis demonstrates that Airbnb listing prices in Paris are predictable from structured listing metadata with meaningful accuracy, and that the market is structured into identifiable segments with distinct pricing strategies. The main findings are summarised in Table~\ref{tab:summary}.
+
+\begin{table}[H]
+  \centering
+  \caption{Summary of key findings}
+  \label{tab:summary}
+  \small
+  \begin{tabularx}{\textwidth}{lX}
+    \toprule
+    \textbf{Topic} & \textbf{Finding} \\
+    \midrule
+    Top price driver & Capacity (\texttt{accommodates}, \texttt{bedrooms}): consistent across all three feature selection methods; RF importance 44\% on \texttt{bedrooms} alone \\
+    Location effect & Arrondissement dummies collectively rank among the top features; the 7\textsuperscript{e}/8\textsuperscript{e} premium is \euro{}40--\euro{}80 over the city median \\
+    Best model & Tuned XGBoost: Test R\textsuperscript{2}~=~0.657 (log scale), MAE~=~\euro{}27.2, +16\% RMSE improvement over linear regression \\
+    Non-linearity & XGBoost gains +15 R\textsuperscript{2} pts vs. linear models, confirming significant interaction effects in price formation \\
+    Model stability & XGBoost CV std = 0.006; MLP CV std = 0.054---MLP unsuitable for deployment despite similar point estimate \\
+    Amenities & Account for \(\approx\)23\% of price variance (amenity-only DT); pool/hot tub highest premium, elevator/A/C most actionable \\
+    Segmentation & 4 K-Means clusters (validated 78.2\% by Ward): Spacious Premium, Quality Mid-Range, Standard Compact, Low-Rated Fringe \\
+    Market structure & 49.4\% of listings are Standard Compact (individual hosts, small apartments); 12.4\% are Spacious Premium (professional operators) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Limitations}
+
+\begin{enumerate}[itemsep=5pt]
+  \item \textbf{Static snapshot.} The dataset is a single-point-in-time scrape. Dynamic pricing, seasonal fluctuations, and post-COVID market shifts are not captured. A host using the model in December should not expect the same accuracy as in August.
+
+  \item \textbf{Listed price vs.\ realised revenue.} The model predicts the \textit{advertised} nightly rate. Actual revenue depends on occupancy, which is driven by pricing, ranking, reviews, and competition---none of which are fully observable from the listing metadata. An optimal \textit{revenue} model would require integration with calendar availability data.
+
+  \item \textbf{Missing features.} \texttt{beds}, \texttt{bathrooms}, \texttt{cancellation\_policy}, and \texttt{availability\_365} are absent from this export. Bathrooms in particular are a strong quality signal for premium listings; their absence likely contributes to the residual variance at the top of the price range.
+
+  \item \textbf{No review text.} This export contains only review metadata (no comments). NLP-based sentiment scoring would add a guest-experience quality signal that is not captured by the numeric rating---particularly useful for differentiating listings within the Standard Compact cluster.
+
+  \item \textbf{Unconditional amenity analysis.} The amenity premium estimates are unconditional; they do not control for property size or location. The true causal effect of adding an elevator on price---holding all else equal---is likely smaller than the raw premium suggests. A properly identified estimate would require a panel dataset (same listing observed before and after an upgrade).
+
+  \item \textbf{Residual heteroscedasticity at the luxury end.} The XGBoost model's fan-out in residuals above \euro{}250 means predictions for luxury listings carry substantially higher uncertainty than for mid-market ones. The model should be marketed with this caveat.
+\end{enumerate}
+
+\subsection{Future Directions}
+
+\begin{itemize}[itemsep=4pt]
+  \item \textbf{Seasonal and time-series modelling}: although the seasonal decomposition (Section~\ref{sec:eda}) confirms that the seasonal component accounts for only 1.8\% of aggregate variance, seasonality remains a meaningful limitation at the individual listing level. The model was trained on a single cross-sectional snapshot and cannot capture intra-year price variation driven by tourist peaks (July--August), school holidays, or major events. A truly robust pricing tool would require a time-series-aware model trained on repeated observations across all seasons.
+  \item \textbf{Dynamic revenue optimisation}: integrate calendar availability data to model the price--occupancy tradeoff and generate revenue-optimal (rather than rate-optimal) recommendations.
+  \item \textbf{NLP on review text}: a richer scrape with guest comments would enable sentiment scoring and topic modelling (cleanliness, location, host communication), adding a guest-experience quality dimension to the model.
+  \item \textbf{Image-based quality scoring}: listing photos could be processed with a pre-trained CNN to generate an objective ``photo quality'' score as a proxy for décor and presentation.
+  \item \textbf{Causal pricing experiments}: a difference-in-differences design tracking listings before and after specific amenity installations would isolate the causal price effect from the observed correlational premium.
+  \item \textbf{Competitive dynamics}: extending the model to incorporate competitor density and pricing (number of similar listings within 500m) would capture local supply effects that are currently absorbed by the neighbourhood fixed effect.
+\end{itemize}
+
+\vspace{1.2cm}
+\begin{center}
+  {\color{airbnbCoral}\rule{0.6\textwidth}{1.5pt}}\\[0.4cm]
+  {\small\color{airbnbGrey}
+    Data: Kaggle --- Airbnb Paris dataset $\cdot$
+    Business Analytics Using Python $\cdot$ HEC Paris\\
+    Professor Xitong LI $\cdot$ May 2026}
+\end{center}
+
+\end{document}
