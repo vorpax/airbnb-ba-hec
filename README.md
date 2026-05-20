@@ -87,7 +87,7 @@ docker compose up
 
 ## Dataset
 
-**Source**: [Inside Airbnb — Paris](https://insideairbnb.com/get-the-data/)  
+**Source**: [Kaggle, Airbnb — Paris](https://www.kaggle.com/datasets/abaghyangor/airbnb-paris)  
 **License**: Creative Commons CC0 (public domain)
 
 The listings dataset contains ~74 columns covering property characteristics, location, host attributes, pricing, and review scores, filtered to Paris listings only.
