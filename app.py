@@ -214,17 +214,17 @@ st.sidebar.divider()
 
 # Trigger model training in background so it's ready
 with st.sidebar:
-    if st.button("🔄 Load model", help="Pre-load the model for faster predictions"):
+    if st.button("Load model", help="Pre-load the model for faster predictions"):
         train_model()
         st.success("Model ready!")
 
 # ── main tabs ─────────────────────────────────────────────────────────────────
 tab_eda, tab_feat, tab_models, tab_clusters, tab_pred = st.tabs([
-    "🏠 EDA",
-    "📊 Feature Analysis",
-    "🤖 Models",
-    "🗺️ Clusters",
-    "💰 Price Predictor",
+    "EDA",
+    "Feature Analysis",
+    "Models",
+    "Clusters",
+    "Price Predictor",
 ])
 
 
@@ -345,7 +345,7 @@ with tab_clusters:
 
 # ── TAB 5: PRICE PREDICTOR ────────────────────────────────────────────────────
 with tab_pred:
-    st.header("💰 Interactive Price Predictor")
+    st.header("Interactive Price Predictor")
     st.markdown(
         "Enter your listing's characteristics to get an estimated nightly price "
         "based on our best XGBoost model (R² ≈ 0.63)."
@@ -416,7 +416,7 @@ with tab_pred:
         availability_365 = st.slider("Availability (days/year)", 0, 365, 180)
 
     st.divider()
-    predict_btn = st.button("🔮 Predict price", type="primary", use_container_width=True)
+    predict_btn = st.button("Predict price", type="primary", use_container_width=True)
 
     if predict_btn:
         with st.spinner("Computing prediction…"):
